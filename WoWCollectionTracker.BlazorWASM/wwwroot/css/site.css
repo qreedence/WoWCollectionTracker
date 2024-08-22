@@ -1,0 +1,301 @@
+﻿* {
+    padding: 0;
+    margin: 0;
+    font-family: "Poppins", sans-serif;
+}
+
+.character-search {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    align-items: center;
+}
+
+.character-brief {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.flex-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.overview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.achievement-columns{
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    align-items: center;
+}
+
+.achievement-category {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    align-self: center;
+    width: 66%;
+    padding-inline: 2rem;
+    align-items: center;
+}
+
+.achievement-subcategory {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    align-self: start;
+    min-width: 100%;
+    padding-inline: 2rem;
+    align-items: center;
+}
+
+.achievement-category-header {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: end;
+    padding-right: 6%;
+    cursor: pointer;
+    background-color: lightgrey;
+    border-radius: 8px;
+    padding-inline: 2rem;
+    padding-block: 1rem;
+    width: 100%;
+    box-sizing:content-box;
+}
+
+.achievement-category-header h3 {
+    font-weight: 700;
+}
+
+h3 svg {
+    fill: black;
+    width: 36px;
+    height: 36px;
+}
+
+.end {
+    align-items: end;
+}
+
+
+.progress-bar {
+    position: relative;
+    background-color: #333;
+    width: 180px;
+    height: 30px;
+    transform: skew(0deg);
+    font-family: 'Orbitron', monospace;
+    &:before
+
+{
+    --width: calc(var(--p) * 1%);
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background-color: #2391f7;
+    z-index: 0;
+    animation: load .2s forwards linear;
+}
+
+/*&:after {
+    counter-reset: progress var(--p);
+    content: counter(progress) '%';
+    color: #000;
+    position: absolute;
+    left: 5%;
+    top: 50%;
+    transform: translateY(-50%) skewX(-30deg);
+    z-index: 1;
+}*/
+
+.progress-bar:after {
+    content: var(--p) '%';
+    color: #000;
+    position: absolute;
+    left: 5%;
+    top: 50%;
+    transform: translateY(-50%) skewX(-30deg);
+    z-index: 1;
+}
+
+&__label {
+    transform: skew(-30deg) translateY(-100%);
+    line-height: 1.5;
+}
+
+}
+
+@keyframes load {
+    to {
+        width: var(--width);
+    }
+}
+
+.achievement-card {
+    width: 95%;
+    display: flex;
+    flex-direction: row;
+    cursor: pointer;
+    border: 1px solid black;
+    border-radius: 4px;
+    padding-block: 0.6rem;
+    padding-inline: 0.6rem;
+    gap: 1.2rem;
+    justify-content: space-between;
+    background-color: rgb(230, 230, 230);
+}
+
+.achievement-card-main {
+    display: flex;
+    flex-direction: row;
+    gap: 2rem;
+}
+
+.achievement-info {
+    display: flex;
+    flex-direction: row;
+}
+
+.achievement-icon {
+    width: 68px;
+    height: 68px;
+    border: 2px solid black;
+    border-radius: 8px;
+    filter: grayscale(1);
+}
+
+.left {
+    display: flex;
+    align-items: center;
+}
+
+.left img{
+    width: 60px;
+    height: 60px;
+}
+
+.right{
+    align-items: end;
+}
+
+.achievement-card h1{
+    font-size: 1.4rem;
+}
+
+.achievement-card href{
+    right: 0%;
+    left: 100%;
+}
+
+.points {
+
+}
+
+
+.completed-achievement{
+    background-color: white;
+    
+}
+
+.completed-achievement > div > div > img {
+    filter:grayscale(0);
+}
+
+.completed-criteria {
+    font-weight: bold;
+}
+
+.collected-mount {
+    filter: grayscale(1);
+}
+
+.loading {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+}
+
+.loading-gif {
+    max-height: 3rem;
+}
+
+.patch-overview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding-bottom: 10rem;
+}
+
+.menu-button-row{
+    display: flex;
+    gap: 3rem;
+}
+
+.menu-button-row > button {
+    border: none;
+    background: none;
+    font-size: 2.2rem;
+    font-weight: 600;
+    margin-bottom: 1.8rem;
+    transition: 0.2s;
+}
+
+.menu-button-row > button:hover {
+    transform: translateY(-5%);
+}
+
+.underlined {
+    text-decoration: underline;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse; /* Ensures borders are merged into a single border */
+    margin: 1rem 0; /* Adds margin above and below the table */
+}
+
+thead {
+    background-color: #f4f4f4; /* Light background for header */
+}
+
+th, td {
+    padding: 0.8rem; /* Adds space around the content in cells */
+    text-align: left; /* Aligns text to the left */
+    border: 1px solid #ddd; /* Adds a light border around cells */
+}
+
+/* Header styles */
+th {
+    background-color: #333; /* Dark background for headers */
+    color: #fff; /* White text color for headers */
+    font-weight: bold; /* Makes header text bold */
+}
+
+/* Zebra striping for rows */
+tbody tr:nth-child(even) {
+    background-color: #f9f9f9; /* Light grey background for even rows */
+}
+
+/* Hover effect for rows */
+tbody tr:hover {
+    background-color: #f1f1f1; /* Slightly darker grey background on hover */
+}

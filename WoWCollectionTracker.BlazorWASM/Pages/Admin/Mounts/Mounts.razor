@@ -1,0 +1,151 @@
+﻿@page "/admin/mounts"
+@using SharedModels.Models
+@inject HttpClient Http
+
+<h3>Search for mount (item)</h3>
+<div>
+    <InputNumber @bind-Value="ItemId"></InputNumber>
+    <button @onclick="SearchItem">Search Item</button>
+</div>
+
+<div>
+    <InputNumber @bind-Value="MountId"></InputNumber>
+    <button @onclick="SearchMount">Search Mount</button>
+</div>
+
+@if (Item != null)
+{
+    <img src="@Item.MediaObject.Assets.FirstOrDefault().Value.ToString()" />
+    <p>@Item.Name</p>
+    <p>@Item.description</p>
+}
+
+@if (Mount != null)
+{
+    <p>@Mount.Name</p>
+    <p>@Mount.Description</p>
+}
+
+
+@if (Item != null && Mount != null)
+{
+    <EditForm Model="LocalMount" OnSubmit="Submit" FormName="AddMount">
+        <div>
+            <PatchSelector @bind-Patch="LocalMount.Patch"></PatchSelector>
+        </div>
+        <div>
+            <label>Subcategory</label>
+            <InputText @bind-Value="LocalMount.SubCategory"></InputText>
+        </div>
+        <div>
+            <label>Faction</label>
+            <div>
+                <InputCheckbox @bind-Value="IsHordeChecked"></InputCheckbox>
+                <label>Horde</label>
+            </div>
+            <div>
+                <InputCheckbox @bind-Value="IsAllianceChecked"></InputCheckbox>
+                <label>Alliance</label>
+            </div>
+        </div>
+        
+        <p>@ErrorMessage</p>
+        <button type="submit">Add achievement</button>
+    </EditForm>
+}
+
+
+
+@code {
+    private Item Item { get; set; } = null;
+    private int ItemId { get; set; }
+    private Mount Mount { get; set; } = null;
+    private int MountId { get; set; }
+
+    private bool IsHordeChecked { get; set; } = false;
+    private bool IsAllianceChecked { get; set; } = false;
+
+    private string ErrorMessage { get; set; } = "";
+
+    public LocalMount LocalMount { get; set; } = new LocalMount();
+
+    public async Task SearchItem()
+    {
+        Item = null;
+        var result = await Http.GetFromJsonAsync<Item>($"api/Item/{ItemId}");
+        if (result != null)
+        {
+            Item = result;
+            ErrorMessage = "";
+        }
+        else if (result == null)
+        {
+            Item = null;
+            ErrorMessage = "Item not found";
+        }
+        StateHasChanged();
+    }
+
+    public async Task SearchMount()
+    {
+        Mount = null;
+        var result = await Http.GetFromJsonAsync<Mount>($"api/Mount/{MountId}");
+        if (result != null)
+        {
+            Mount = result;
+            ErrorMessage = "";
+        }
+        else if (result == null)
+        {
+            Mount = null;
+            ErrorMessage = "Item not found";
+        }
+        StateHasChanged();
+    }
+
+    public async Task Submit()
+    {
+        if (!string.IsNullOrEmpty(LocalMount.Patch) && !string.IsNullOrEmpty(LocalMount.SubCategory))
+        {
+            ErrorMessage = "";
+            LocalMount.Icon = string.Empty;
+
+            LocalMount.Id = Mount.Id;
+            LocalMount.ItemName = Item.Name;
+            LocalMount.MountName = Mount.Name;
+            LocalMount.Description = Mount.Description;
+
+            if (Item.MediaObject?.Assets?.Any() == true)
+            {
+                LocalMount.Icon = Item.MediaObject.Assets.FirstOrDefault().Value;
+            }
+
+            if (IsAllianceChecked == true && IsHordeChecked == true)
+            {
+                LocalMount.Faction = "Both";
+            }
+            else if (IsAllianceChecked == true && IsHordeChecked == false)
+            {
+                LocalMount.Faction = "Alliance";
+            }
+            else if (IsAllianceChecked == false && IsHordeChecked == true)
+            {
+                LocalMount.Faction = "Horde";
+            }
+
+            if(LocalMount.Faction != "")
+            {
+                await Http.PostAsJsonAsync<LocalMount>("/api/Mount", LocalMount);
+            }
+            else
+            {
+                ErrorMessage = "Choose a faction";
+            }
+
+        }
+        else
+        {
+            ErrorMessage = "Please specify patch and subcategory";
+        }
+    }
+}

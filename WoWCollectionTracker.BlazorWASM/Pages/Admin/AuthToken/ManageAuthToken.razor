@@ -1,0 +1,75 @@
+﻿@page "/admin/auth"
+@inject HttpClient Http
+@using SharedModels.Models
+
+<h3>ManageAuthToken</h3>
+@if (AuthToken == null)
+{
+    <p>No auth tokens found.</p>
+}
+else if (AuthToken != null && AuthToken.Id != 0)
+{
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Hashed Auth Token</th>
+            <th>Date of acquisition</th>
+            <th>Expires At</th>
+            <th>Hours Remaining</th>
+        </tr>
+            <tr>
+                <td>@AuthToken.Id</td>
+                <td>@AuthToken.HashedToken</td>
+                <td>@AuthToken.Acquired.ToString()</td>
+                <td>@AuthToken.ExpiresAt.ToString()</td>
+                <td>@HoursRemaining</td>
+            </tr>
+    </table>
+}
+
+<button @onclick="RefreshToken">Refresh token</button>
+
+@code {
+    private AuthToken AuthToken = new AuthToken();
+    private string HoursRemaining = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAuthTokens();
+        HoursRemaining = await Countdown(AuthToken.ExpiresAt);
+    }
+
+    public async Task RefreshToken()
+    {
+        await Http.GetAsync("api/AuthTokens/retrieve");
+        await LoadAuthTokens();
+        StateHasChanged();
+    }
+
+    public async Task LoadAuthTokens()
+    {
+        var result = await Http.GetAsync("api/AuthTokens");
+        if (result.IsSuccessStatusCode)
+        {
+            AuthToken = await Http.GetFromJsonAsync<AuthToken>("api/AuthTokens");
+        }
+        else if (result.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return;
+        }
+    }
+
+    public async Task<string> Countdown(DateTime expireTime)
+    {
+        DateTime currentTime = DateTime.UtcNow;
+        TimeSpan timeRemaining = expireTime - currentTime;
+        int hoursRemaining = (int)timeRemaining.TotalHours;
+
+        if(hoursRemaining < 1)
+        {
+            hoursRemaining = 0;
+        }
+
+        return $"{hoursRemaining}h";
+    }
+}

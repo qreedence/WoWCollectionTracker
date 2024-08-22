@@ -1,0 +1,254 @@
+﻿@using SharedModels.Models
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+@if (string.IsNullOrEmpty(LocalCharacter.Name) && FetchingData == false)
+{
+        <EditForm class="character-search" Model="CharacterSearchModel" OnSubmit="Search">
+            @if(!string.IsNullOrEmpty(ErrorMessage))
+            {
+            <div>
+                <label>@ErrorMessage</label>
+            </div>
+            }
+            <div>
+                <label>Region</label>
+                <InputSelect @bind-Value="CharacterSearchModel.Region">
+                    <option value="" disabled selected>Select a region</option>
+                    <option value="eu">EU</option>
+                    <option value="us">US</option>
+                    <option value="kr">KR</option>
+                    <option value="tw">TW</option>
+                    <option value="cn">CN</option>
+                </InputSelect>
+            </div>
+            <div>
+                <label>Realm</label>
+                <InputText @bind-Value="CharacterSearchModel.Realm"></InputText>
+            </div>
+            <div>
+                <label>Character</label>
+                <InputText @bind-Value="CharacterSearchModel.CharacterName"></InputText>
+            </div>
+            <button type="submit">Search</button>
+    </EditForm>
+}
+else if (string.IsNullOrEmpty(LocalCharacter.Name) && FetchingData == true)
+{
+    <div class="loading">
+        <div class="flex-col">
+            <label>Fetching data...</label>
+            <label>(This may take a while)</label>
+        </div>
+    </div>
+
+}
+@if (LocalCharacter != null && !string.IsNullOrEmpty(LocalCharacter.Name))
+{
+    <div class="character-brief">
+        <div class="flex-col">
+            <label>@($"{LocalCharacter.Name} <{LocalCharacter.Guild}>")</label>
+            <label>Lvl @LocalCharacter.Level.ToString() @LocalCharacter.CharacterClass</label>
+        </div>
+        <div class="flex-col">
+            <label>Last updated: @LastUpdated(LocalCharacter.LastUpdated)</label>
+
+            <div class="button-row">
+                @if (LocalCharacter.LastUpdated <= DateTime.UtcNow.AddMinutes(-20))
+                {
+                    <button type="button" @onclick="Refresh" disabled="@isRefreshing">
+                        @if (isRefreshing)
+                        {
+                            <span>Refreshing...</span>
+                        }
+                        else
+                        {
+                            <span>Refresh</span>
+                        }
+                    </button>
+                }
+                <button type="button" @onclick="Swap">Swap Character</button>
+            </div>   
+        </div>
+        
+        @if (!string.IsNullOrEmpty(LocalCharacter.Icon))
+        {
+            <img src="@LocalCharacter.Icon" />
+        }
+        else
+        {
+            <img src="https://render.worldofwarcraft.com/shadow/avatar/2-1.jpg" />
+        }
+
+        
+    </div>
+    
+}
+
+
+@code {
+    public LocalCharacter LocalCharacter { get; set; } = new LocalCharacter();
+
+    public CharacterSearchModel CharacterSearchModel { get; set; } = new CharacterSearchModel();
+
+    public string ErrorMessage { get; set; } = "";
+    private bool isRefreshing = false;
+    private bool FetchingData = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await GetSearchModelFromLocalStorage();
+        if (result != null)
+        {
+            FetchingData = true;
+            StateHasChanged();
+            try
+            {
+                CharacterSearchModel = result;
+                await Search();
+            }
+            finally
+            {
+                FetchingData = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    public async Task Search()
+    {
+        FetchingData = true;
+        StateHasChanged();
+
+        try
+        {
+            if (CharacterSearchModel.Region == "")
+            {
+                CharacterSearchModel.Region = "eu";
+            }
+
+            if (!string.IsNullOrEmpty(CharacterSearchModel.Realm))
+            {
+                CharacterSearchModel.Realm = CharacterSearchModel.Realm.Trim().Replace(" ", "-").ToLower();
+            }
+            else
+            {
+                ErrorMessage = "Please specify your realm.";
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(CharacterSearchModel.CharacterName))
+            {
+                var result = await Http.GetFromJsonAsync<LocalCharacter>($"api/Character/search?region={CharacterSearchModel.Region}&realm={CharacterSearchModel.Realm}&characterName={CharacterSearchModel.CharacterName}");
+                if (result != null && !string.IsNullOrEmpty(result.Name) && !string.IsNullOrEmpty(result.Realm) && result.Id > 0)
+                {
+                    LocalCharacter = result;
+                    await SaveSearchToLocalStorage(CharacterSearchModel);
+                }
+                else
+                {
+                    ErrorMessage = "Not found";
+                }
+            }
+            else
+            {
+                ErrorMessage = "Please specify character name.";
+            }
+        }
+        finally
+        {
+            FetchingData = false;
+            StateHasChanged();
+        }
+    }
+
+
+    public async Task Refresh()
+    {
+        isRefreshing = true;
+        StateHasChanged();
+
+        try
+        {
+            await Http.GetAsync($"api/Character/refresh?region={CharacterSearchModel.Region}&realm={CharacterSearchModel.Realm}&characterName={CharacterSearchModel.CharacterName}");
+            if (!string.IsNullOrEmpty(CharacterSearchModel.CharacterName))
+            {
+                var result = await Http.GetFromJsonAsync<LocalCharacter>($"api/Character/search?region={CharacterSearchModel.Region}&realm={CharacterSearchModel.Realm}&characterName={CharacterSearchModel.CharacterName}");
+                if (result != null && !string.IsNullOrEmpty(result.Name) && !string.IsNullOrEmpty(result.Realm) && result.Id > 0)
+                {
+                    LocalCharacter = result;
+                    await SaveSearchToLocalStorage(CharacterSearchModel);
+                }
+                else
+                {
+                    ErrorMessage = "Not found";
+                }
+            }
+            else
+            {
+                ErrorMessage = "Please specify character name.";
+            }
+        }
+        finally
+        {
+            isRefreshing = false;
+            StateHasChanged();
+        }
+    }
+
+    public async Task Swap()
+    {
+        await RemoveSearchModelFromLocalStorage();
+        CharacterSearchModel = new CharacterSearchModel
+            {
+                Region = "",
+                Realm = "",
+                CharacterName = ""
+            };
+        LocalCharacter = new LocalCharacter();
+        StateHasChanged();
+    }
+
+    public string LastUpdated(DateTime lastUpdate)
+    {
+        var now = DateTime.UtcNow;
+        var duration = now - lastUpdate;
+
+        if (duration.TotalSeconds < 60)
+        {
+            var seconds = (int)duration.TotalSeconds;
+            return $"{seconds}s ago";
+        }
+        else if (duration.TotalMinutes < 60)
+        {
+            var minutes = (int)duration.TotalMinutes;
+            return $"{minutes}m ago";
+        }
+        else if (duration.TotalHours < 24)
+        {
+            var hours = (int)duration.TotalHours;
+            return $"{hours}h ago";
+        }
+        else
+        {
+            var days = (int)duration.TotalDays;
+            return $"{days} day{(days > 1 ? "s" : "")} ago";
+        }
+    }
+
+    public async Task SaveSearchToLocalStorage(CharacterSearchModel model)
+    {
+        await JSRuntime.InvokeVoidAsync("saveSearchModelToLocalStorage", "characterSearchModel", model);
+    }
+
+    public async Task<CharacterSearchModel> GetSearchModelFromLocalStorage()
+    {
+        return await JSRuntime.InvokeAsync<CharacterSearchModel>("getSearchModelFromLocalStorage", "characterSearchModel");
+    }
+
+    public async Task RemoveSearchModelFromLocalStorage()
+    {
+        await JSRuntime.InvokeVoidAsync("removeSearchModelFromLocalStorage", "characterSearchModel");
+    }
+}
+

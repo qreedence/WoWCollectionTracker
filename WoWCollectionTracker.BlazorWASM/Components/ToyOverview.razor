@@ -1,0 +1,24 @@
+﻿@using SharedModels.Models
+
+    @if (Categories != null && Categories.Count > 0)
+    {
+        <div class="achievement-columns">
+        @foreach (var category in Categories)
+        {
+            
+                <ToyCategory Category="@category"
+                             ToyList="@ToyList">
+                </ToyCategory>
+            
+        }
+        </div>
+    }
+
+
+@code {
+    [Parameter]
+    public List<string> Categories { get; set; }
+
+    [Parameter]
+    public List<LocalToy> ToyList { get; set; }
+}

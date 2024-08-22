@@ -1,0 +1,53 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="overview">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Overview
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="admin/auth">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Auth Tokens
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="admin/achievements">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Add Achievements
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="admin/achievements/edit">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Edit Achievements
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="admin/mounts">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Mounts
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="admin/toys">
+                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Toys
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

@@ -1,0 +1,46 @@
+﻿@using SharedModels.Models
+
+    @if (Categories != null && Categories.Count > 0)
+    {
+        <div class="achievement-columns">
+            @foreach (var category in Categories)
+            {
+                <AchievementCategory Category="@category"
+                                     AchievementList="@AchievementList"
+                                     ExpandedAchievementId="@ExpandedAchievementId"
+                                     OnToggleAchievement="HandleToggleAchievement"
+                                     SimplifiedAchievementData="SimplifiedAchievementData">
+                </AchievementCategory>
+            }
+        </div>
+    }
+    else
+    {
+        <p>No categories available.</p>
+    }
+
+
+@code {
+    [Parameter]
+    public List<string> Categories { get; set; }
+
+    [Parameter]
+    public List<LocalAchievement> AchievementList { get; set; }
+
+    [Parameter]
+    public SimplifiedAchievementData SimplifiedAchievementData { get; set; }
+
+    private int? ExpandedAchievementId { get; set; }
+
+    private void HandleToggleAchievement(int achievementId)
+    {
+        if (ExpandedAchievementId == achievementId)
+        {
+            ExpandedAchievementId = null;
+        }
+        else
+        {
+            ExpandedAchievementId = achievementId;
+        }
+    }
+}

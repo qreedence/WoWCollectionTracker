@@ -1,0 +1,148 @@
+﻿@page "/admin/achievements"
+@using SharedModels.Models
+@inject HttpClient Http
+
+
+<h3>Search for achievement</h3>
+
+<div>
+    <InputNumber @bind-Value="AchievementId"></InputNumber>
+    <button @onclick="Search">Search</button>
+    <p>@ErrorMessage</p>
+</div>
+
+
+@if(Achievement != null && AddingAchievement == false)
+{
+    <img src="@Achievement.MediaObject.Assets.FirstOrDefault().Value.ToString()" />
+    <p>@Achievement.Name</p>
+    <p>@Achievement.Description</p>
+
+    @if(LocalAchievement != null)
+    {
+        <EditForm Model="LocalAchievement" OnSubmit="Submit" FormName="AddAchievement">
+            <div>
+                <PatchSelector @bind-Patch="LocalAchievement.Patch"></PatchSelector>
+            </div>
+            <div>
+                <label>Category</label>
+                <InputText @bind-Value="LocalAchievement.SubCategory"></InputText>
+            </div>
+            <div>
+                <label>Subcategory</label>
+                <InputText @bind-Value="LocalAchievement.SubSubCategory"></InputText>
+            </div>
+            <p>@ErrorMessage</p>
+            <button type="submit">Add achievement</button>
+        </EditForm>
+    }
+    else if (Achievement != null && AddingAchievement == true)
+    {
+        <label>Adding achievement...</label>
+    }
+
+}
+
+@if(!string.IsNullOrEmpty(SuccessMessage))
+{
+    <label>@SuccessMessage</label>
+}
+
+
+@code {
+    private Achievement Achievement { get; set; } = null;
+    private int AchievementId { get; set; }
+    private string ErrorMessage { get; set; } = "";
+    private string SuccessMessage { get; set; } = "";
+
+    private bool AddingAchievement { get; set; } = false;
+
+    public LocalAchievement LocalAchievement { get; set; } = new LocalAchievement();
+
+    public async Task Search()
+    {
+        Achievement = null;
+        var httpResponse = await Http.GetAsync($"api/Achievement/{AchievementId}");
+        if (httpResponse != null)
+        {
+            var result = await httpResponse.Content.ReadFromJsonAsync<Achievement>();
+            if (result != null)
+            {
+                Achievement = result;
+                ErrorMessage = "";
+            }
+            else
+            {
+                ErrorMessage = "Failed to deserialize the response";
+            }
+        }
+        else
+        {
+            ErrorMessage = $"Request failed with status code {httpResponse.StatusCode}";
+        }
+        StateHasChanged();
+    }
+
+    public async Task Submit()
+    {
+        if (!string.IsNullOrEmpty(LocalAchievement.Patch) && !string.IsNullOrEmpty(LocalAchievement.SubCategory))
+        {
+            AddingAchievement = true;
+            StateHasChanged();
+
+            try
+            {
+                ErrorMessage = "";
+                LocalAchievement.Icon = string.Empty;
+
+                LocalAchievement.Id = Achievement.Id;
+                LocalAchievement.Name = Achievement.Name;
+                LocalAchievement.Category = Achievement.category.Name;
+                LocalAchievement.Description = Achievement.Description;
+                LocalAchievement.Points = Achievement.Points;
+                LocalAchievement.IsAccountWide = Achievement.IsAccountWide;
+
+                if (Achievement.criteria != null)
+                {
+                    LocalAchievement.CriteriaDescription = Achievement.criteria.Description;
+                    LocalAchievement.CriteriaAmount = Achievement.criteria.Amount;
+                    if (Achievement.criteria.child_criteria != null)
+                    {
+                        LocalAchievement.Criteria = new Criteria();
+                        LocalAchievement.Criteria.child_criteria = new List<ChildCriteria>();
+                        LocalAchievement.Criteria = Achievement.criteria;
+                    }
+                }
+
+                if (Achievement.MediaObject?.Assets?.Any() == true)
+                {
+                    LocalAchievement.Icon = Achievement.MediaObject.Assets.FirstOrDefault().Value;
+                }
+
+                try
+                {
+                    await Http.PostAsJsonAsync<LocalAchievement>("/api/Achievement", LocalAchievement);
+                }
+                catch
+                {
+                    new Exception("Something went wrong");
+                }
+
+
+            }
+            finally
+            {
+                AddingAchievement = false;
+                Achievement = null;
+                SuccessMessage = $"Successfully added achievement {LocalAchievement.Name}";
+                StateHasChanged();
+            }
+
+            
+        }
+        else
+        {
+            ErrorMessage = "Please specify patch and subcategory";
+        }
+    }
+}

@@ -1,0 +1,35 @@
+﻿@using SharedModels.Models
+
+<div class="achievement-card @(Toy.Collected ? "completed-achievement" : "")">
+    <div class="achievement-card-main">
+        <div>
+            <img class="achievement-icon" src="@Toy.Icon" alt="@Toy.Name" />
+        </div>
+        <div class="achievement-info">
+            <div class="flex-col">
+                <h4>@Toy.Name</h4>
+                <p>@Toy.Description</p>
+            </div>
+        </div>
+    </div>
+    <div class="flex-col right">
+        @if (WowheadLink != "")
+        {
+            <NavLink href="@WowheadLink">Wowhead</NavLink>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public LocalToy Toy { get; set; }
+    public string WowheadLink { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Toy != null)
+        {
+            WowheadLink = $"https://www.wowhead.com/item={Toy.ItemId}";
+        }
+    }
+}

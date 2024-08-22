@@ -1,0 +1,24 @@
+﻿@using SharedModels.Models
+
+    @if (Categories != null && Categories.Count > 0)
+    {
+        <div class="achievement-columns">
+        @foreach (var category in Categories)
+        {
+            
+                <MountCategory Category="@category"
+                               MountList="@MountList">
+                </MountCategory>
+            
+        }
+        </div>
+    }
+
+
+@code {
+    [Parameter]
+    public List<string> Categories { get; set; }
+
+    [Parameter]
+    public List<LocalMount> MountList { get; set; }
+}

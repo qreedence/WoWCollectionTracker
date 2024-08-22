@@ -1,0 +1,17 @@
+﻿@page "/10-2-6"
+@using SharedModels.Models
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<PatchOverview 
+    Patch="10.2.6"
+    AchievementCategories="@AchievementCategories"
+    MountCategories="@MountCategories"
+    ToyCategories="@ToyCategories">
+</PatchOverview>
+
+@code {
+    public List<string> AchievementCategories = new List<string> { "Quests", "Exploration","Reputation", "Expansion Features", "Noblegarden" ,"Skyriding", "Feats of Strength" };
+    public List<string> MountCategories = new List<string> { "Achievement", "Trading Post", "PvP", };
+    public List<string> ToyCategories = new List<string> { "Noblegarden", "MDI" };
+}

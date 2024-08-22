@@ -1,0 +1,238 @@
+﻿@using SharedModels.Models
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+@if(FetchingData == false)
+{
+    <div class="patch-overview">
+        <h1>@Patch</h1>
+        <div class="menu-button-row">
+            <button @onclick='() => SetCurrentView("Achievements")'>
+                <div>Achievements</div>
+                <div class="progress-bar" style="--p:@AchievementCompletionPercentage">
+                    <div class="progress-bar__label"></div>
+                </div>
+                </button>
+            <button @onclick='() => SetCurrentView("Mounts")'>
+                <div>Mounts</div>
+                <div class="progress-bar" style="--p:@MountCompletionPercentage">
+                    <div class="progress-bar__label"></div>
+                </div>
+            </button>
+            <button @onclick='() => SetCurrentView("Toys")'>
+                <div>Toys</div>
+                <div class="progress-bar" style="--p:@ToyCompletionPercentage">
+                    <div class="progress-bar__label"></div>
+                    <div></div>
+                </div>
+            </button>
+        </div>
+        <div class="overview">
+            @if (CurrentView == "Achievements")
+            {
+                <AchievementOverview Categories="@AchievementCategories"
+                                     AchievementList="@AchievementList"
+                                     SimplifiedAchievementData="@SimplifiedAchievementData">
+                </AchievementOverview>
+            }
+            else if (CurrentView == "Mounts")
+            {
+                <MountOverview Categories="@MountCategories"
+                               MountList="@MountList">
+                </MountOverview>
+
+            }
+            else if (CurrentView == "Toys")
+            {
+                <ToyOverview Categories="@ToyCategories"
+                             ToyList="@ToyList">
+                </ToyOverview>
+            }
+        </div>
+    </div>
+    
+
+}
+else if (FetchingData == true)
+{
+    <p>Fetching data ...</p>
+}
+
+
+
+@code {
+    private List<LocalAchievement> AchievementList = new List<LocalAchievement>();
+    private List<LocalMount> MountList = new List<LocalMount>();
+    private List<LocalToy> ToyList = new List<LocalToy>();
+
+    public int TotalMounts { get; set; }
+    public int CollectedMounts { get; set; }
+    public double MountCompletionPercentage { get; set; }
+
+    public int TotalAchievements { get; set; }
+    public int CollectedAchievements { get; set; }
+    public double AchievementCompletionPercentage { get; set; }
+
+    public int TotalToys {get; set;}
+    public int CollectedToys { get; set; }
+    public double ToyCompletionPercentage { get; set; }
+
+    private string CurrentView { get; set; } = "Achievements";
+    private bool FetchingData = false;
+
+    [Parameter]
+    public List<string> AchievementCategories { get; set; }
+
+    [Parameter]
+    public List<string> MountCategories { get; set; }
+
+    [Parameter]
+    public List<string> ToyCategories { get; set; }
+
+    [Parameter]
+    public string Patch { get; set; }
+
+    public CharacterSearchModel CharacterSearchModel { get; set; } = new CharacterSearchModel();
+    public LocalCharacter LocalCharacter { get; set; } = new LocalCharacter();
+    public SimplifiedAchievementData SimplifiedAchievementData { get; set; } = new SimplifiedAchievementData();
+
+    public int? expandedAchievementId = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchCharacterData();
+    }
+
+    private async Task FetchCharacterData()
+    {
+        FetchingData = true;
+        StateHasChanged();
+
+        var result = await GetSearchModelFromLocalStorage();
+        var resultAchievements = await Http.GetFromJsonAsync<List<LocalAchievement>>($"api/Achievement/filter-patch?patch={Patch}");
+
+        var achievementIds = resultAchievements.Select(a => a.Id).ToList();
+        string achievementIdsQuery = string.Join("&", achievementIds.Select(id => $"achievementIds={id}"));
+
+        if (result != null)
+        {
+            CharacterSearchModel = result;
+            var character = await Http.GetFromJsonAsync<LocalCharacter>($"api/Character/search?region={CharacterSearchModel.Region}&realm={CharacterSearchModel.Realm}&characterName={CharacterSearchModel.CharacterName}");
+            if (character != null && !string.IsNullOrEmpty(character.Name) && !string.IsNullOrEmpty(character.Realm) && character.Id > 0)
+            {
+                LocalCharacter = character;
+            }
+            var resultSimplifiedAchievementData = await Http.GetFromJsonAsync<SimplifiedAchievementData>($"api/Character/fetch-achievement-data?region={CharacterSearchModel.Region}&realm={CharacterSearchModel.Realm}&characterName={CharacterSearchModel.CharacterName}&{achievementIdsQuery}");
+            if (resultSimplifiedAchievementData != null)
+            {
+                SimplifiedAchievementData = resultSimplifiedAchievementData;
+            }
+        }
+
+        if (resultAchievements.Count > 0)
+        {
+            foreach (var achievement in resultAchievements)
+            {
+                bool isCompleted = SimplifiedAchievementData.achievements
+                .Any(a => a.id == achievement.Id && a.criteria.is_completed == true);
+                if (isCompleted)
+                {
+                    achievement.Completed = true;
+                    var completedAchievement = SimplifiedAchievementData.achievements.FirstOrDefault(a => a.id == achievement.Id);
+                    achievement.CompletionDateAndTime = DateTimeOffset.FromUnixTimeMilliseconds(completedAchievement.completed_timestamp).UtcDateTime;
+                }
+            }
+
+            var filteredAchievements = resultAchievements
+            .Where(a => !(a.Unobtainable && !a.Completed))
+            .ToList();
+
+            foreach (var achievement in resultAchievements)
+            {
+                if (achievement.Criteria != null && achievement.Criteria.child_criteria != null)
+                {
+                    foreach (var childCriterion in achievement.Criteria.child_criteria)
+                    {
+                        var isChildCriterionCompleted = SimplifiedAchievementData.achievements
+                            .Where(a => a.criteria != null && a.criteria.child_criteria != null)  // Check for null criteria and child_criteria
+                            .SelectMany(a => a.criteria.child_criteria)
+                            .Any(c => c.id == childCriterion.Id && c.is_completed);
+
+                        if (isChildCriterionCompleted)
+                        {
+                            childCriterion.is_completed = true;
+                        }
+                    }
+                }
+            }
+
+            CollectedAchievements = filteredAchievements.Where(a => a.Completed).Count();
+            TotalAchievements = filteredAchievements.Count();
+            AchievementCompletionPercentage = TotalAchievements > 0
+                ? ((double)CollectedAchievements / TotalAchievements) * 100
+                : 0;
+
+            AchievementList = resultAchievements;
+            StateHasChanged();
+        }
+
+        var resultMounts = await Http.GetFromJsonAsync<List<LocalMount>>($"api/Mount/filter-patch?patch={Patch}");
+        if (resultMounts.Count > 0)
+        {
+            MountList = resultMounts;
+        }
+
+        var filteredMounts = MountList
+            .Where(a => !(a.Unobtainable && !a.Collected))
+            .ToList();
+
+        foreach (var mount in MountList)
+        {
+            bool isCollected = LocalCharacter.Mounts.Contains(mount.Id);
+            mount.Collected = isCollected;
+        }
+
+        CollectedMounts = filteredMounts.Where(a => a.Collected).Count();
+        TotalMounts = filteredMounts.Count();
+        MountCompletionPercentage = TotalMounts > 0
+            ? ((double)CollectedMounts / TotalMounts) * 100
+            : 0;
+
+
+        var resultToys = await Http.GetFromJsonAsync<List<LocalToy>>($"api/Toy/filter-patch?patch={Patch}");
+        if (resultToys.Count > 0)
+        {
+            ToyList = resultToys;
+        }
+
+        var filteredToys = ToyList
+            .Where(a => !(a.Unobtainable && !a.Collected))
+            .ToList();
+
+        foreach (var toy in ToyList)
+        {
+            bool isCollected = LocalCharacter.Toys.Contains(toy.Id);
+            toy.Collected = isCollected;
+        }
+
+        CollectedToys = filteredToys.Where(a => a.Collected).Count();
+        TotalToys = filteredToys.Count();
+        ToyCompletionPercentage = TotalToys > 0
+            ? ((double)CollectedToys / TotalToys) * 100
+            : 0;
+
+        FetchingData = false;
+        StateHasChanged();
+    }
+
+    public async Task<CharacterSearchModel> GetSearchModelFromLocalStorage()
+    {
+        return await JSRuntime.InvokeAsync<CharacterSearchModel>("getSearchModelFromLocalStorage", "characterSearchModel");
+    }
+
+    private void SetCurrentView(string view)
+    {
+        CurrentView = view;
+        StateHasChanged();
+    }
+}

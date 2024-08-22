@@ -1,0 +1,16 @@
+﻿@page "/11-0"
+@using SharedModels.Models
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+
+<PatchOverview Patch="11.0"
+               AchievementCategories="@AchievementCategories"
+               MountCategories="@MountCategories"
+               ToyCategories="@ToyCategories">
+</PatchOverview>
+
+@code {
+    public List<string> AchievementCategories = new List<string> { "Characters", "Quests", "Exploration", "Delves", "Player vs. Player", "Dungeons & Raids", "Professions", "Reputation", "World Events", "Pet Battles", "Collections", "Expansion Features", "Feats of Strength"};
+    public List<string> MountCategories = new List<string> { "Pre-Patch Event", "Rare", "Engineering", "Delves", "Keystone Master","Quest", "Dungeon", "Raid", "Vendor", "Achievement", "PvP", "Trading Post", "In-Game Shop", "Promotion" };
+    public List<string> ToyCategories = new List<string> { "Achievement", "World", "Reputation", "Delves", "Engineering", "Jewelcrafting", "PvP", "Pet Battles", "Winter Veil", "Unknown"};
+}

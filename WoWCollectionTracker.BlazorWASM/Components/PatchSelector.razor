@@ -1,0 +1,39 @@
+﻿<div>
+    <select value="@Patch" @onchange="OnPatchChanged">
+        <option value="" disabled selected>Select a patch</option>
+        <option value="11.0">11.0</option>
+        <option value="10.2.7">10.2.7</option>
+        <option value="10.2.6">10.2.6</option>
+        <option value="10.2.5">10.2.5</option>
+        <option value="10.2">10.2</option>
+        <option value="10.1.7">10.1.7</option>
+        <option value="10.1.5">10.1.5</option>
+        <option value="10.1">10.1</option>
+        <option value="10.0.7">10.0.7</option>
+        <option value="10.0.5">10.0.5</option>
+        <option value="10.0">10.0</option>
+        <option value="9.2.5">9.2.5</option>
+        <option value="9.2">9.2</option>
+        <option value="9.1">9.1</option>
+        <option value="9.0">9.0</option>
+        <option value="8.3">8.3</option>
+        <option value="8.2">8.2</option>
+        <option value="8.1">8.1</option>
+        <option value="8.0">8.0</option>
+    </select>
+</div>
+
+@code {
+    [Parameter]
+    public string Patch { get; set; }
+
+    [Parameter]
+    public EventCallback<string> PatchChanged { get; set; }
+
+    public async Task OnPatchChanged(ChangeEventArgs e)
+    {
+        Patch = e.Value.ToString();
+        await PatchChanged.InvokeAsync(Patch);
+        Console.WriteLine($"Patch changed to: {Patch}");
+    }
+}

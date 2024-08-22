@@ -1,0 +1,81 @@
+﻿@using SharedModels.Models
+
+@if (!string.IsNullOrEmpty(Category))
+{
+    <div class="achievement-category">
+        <div class="achievement-category-header" @onclick="ToggleShowCategory">
+            <h3>@Category</h3>
+            @if (ToyList != null && ToyList.Count > 0)
+            {
+                <div class="flex-row">
+                    <h3>@CollectedToys / @TotalToys</h3>
+                    <div class="progress-bar" style="--p:@CompletionPercentage">
+                        <div class="progress-bar__label"></div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (ShowCategory)
+        {
+            @if (ToyList != null && ToyList.Count > 0)
+            {
+                var groupedToys = ToyList
+                .Where(m => m.SubCategory == Category)
+                .GroupBy(m => string.IsNullOrEmpty(m.SubSubCategory) ? "" : m.SubSubCategory);
+
+
+                @foreach (var group in groupedToys)
+                {
+                    <div class="achievement-subcategory">
+                        <h4>@group.Key</h4>
+                        @foreach (var toy in group)
+                        {
+                            <ToyListing Toy="@toy">
+                            </ToyListing>
+                        }
+                    </div>
+                }
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Category { get; set; }
+
+    [Parameter]
+    public List<LocalToy> ToyList { get; set; }
+
+    public bool ShowCategory { get; set; } = false;
+
+    public double CompletionPercentage{ get; set; }
+
+    public int TotalToys { get; set; }
+
+    public int CollectedToys { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var filteredToys = ToyList
+            .Where(a => a.SubCategory == Category && !(a.Unobtainable && !a.Collected))
+            .ToList();
+
+        CollectedToys = filteredToys.Where(a => a.SubCategory == Category && a.Collected).Count();
+        TotalToys = filteredToys.Where(a => a.SubCategory == Category).Count();
+        CompletionPercentage = TotalToys > 0
+            ? ((double)CollectedToys / TotalToys) * 100
+            : 0;
+
+        ToyList = filteredToys
+           .Where(a => a.SubCategory == Category)
+           .OrderByDescending(a => a.Collected)
+           .ThenBy(a => a.DisplayOrder)
+           .ToList();
+    }
+
+    private void ToggleShowCategory()
+    {
+        ShowCategory = !ShowCategory;
+    }
+}

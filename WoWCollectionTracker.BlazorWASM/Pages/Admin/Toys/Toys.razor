@@ -1,0 +1,134 @@
+﻿@page "/admin/toys"
+@using SharedModels.Models
+@inject HttpClient Http
+
+<h3>Search for toy</h3>
+
+<div>
+    <InputText @bind-Value="ToyName"></InputText>
+    <button @onclick="Search">Search</button>
+</div>
+
+@if(Toy != null && AddingToy == false)
+{
+    <img src="@Toy.mediaObject.Assets.FirstOrDefault().Value.ToString()" />
+    <p>@Toy.item.name</p>
+    @if (Toy?.itemObject?.preview_item?.Spells != null && Toy.itemObject.preview_item.Spells.Count > 0)
+    {
+        var firstSpell = Toy.itemObject.preview_item.Spells.FirstOrDefault();
+        if (firstSpell != null)
+        {
+            <p>@firstSpell.description</p>
+        }
+    }
+
+    if (LocalToy != null)
+    {
+        <EditForm Model="LocalToy" OnSubmit="Submit" FormName="AddToy">
+            <PatchSelector @bind-Patch="LocalToy.Patch"></PatchSelector>
+            <div>
+                <label>Subcategory</label>
+                <InputText @bind-Value="LocalToy.SubCategory"></InputText>
+            </div>
+            <p>@ErrorMessage</p>
+            <button type="submit">Add toy</button>
+        </EditForm>
+    }
+    else if (Toy != null && AddingToy == true)
+    {
+        <label>Adding toy...</label>
+    }
+}
+else if (Toy == null && !string.IsNullOrEmpty(ErrorMessage))
+{
+    <p>@ErrorMessage</p>
+}
+
+@if (!string.IsNullOrEmpty(SuccessMessage))
+{
+    <p>@SuccessMessage</p>
+}
+
+
+@code {
+    private Toy Toy { get; set; } = null;
+    private LocalToy LocalToy { get; set; } = new LocalToy();
+    private string ToyName { get; set; }
+
+    public bool AddingToy { get; set; } = false;
+    private string ErrorMessage { get; set; } = "";
+    private string SuccessMessage { get; set; } = "";
+
+    public async Task Search()
+    {
+        Toy = null;
+        var httpResponse = await Http.GetAsync($"api/Toy/name?name={Uri.EscapeDataString(ToyName)}");
+        if (httpResponse.IsSuccessStatusCode)
+        {
+            var result = await httpResponse.Content.ReadFromJsonAsync<Toy>();
+            if (result != null)
+            {
+                Toy = result;
+                ErrorMessage = "";
+            }
+            else
+            {
+                ErrorMessage = "Failed to deserialize the response.";
+            }
+        }
+        else
+        {
+            ErrorMessage = $"Request failed with status code {httpResponse.StatusCode}.";
+        }
+        StateHasChanged();
+    }
+
+    public async Task Submit()
+    {
+        if (!string.IsNullOrEmpty(LocalToy.Patch) && !string.IsNullOrEmpty(LocalToy.SubCategory))
+        {
+            AddingToy = true;
+            StateHasChanged();
+
+            try
+            {
+                ErrorMessage = "";
+                LocalToy.Icon = "";
+
+                LocalToy.Id = Toy.id;
+                LocalToy.ItemId = Toy.item.id;
+                LocalToy.Name = Toy.item.name;
+                if (Toy?.itemObject?.preview_item?.Spells != null && Toy.itemObject.preview_item.Spells.Count > 0)
+                {
+                    var firstSpell = Toy.itemObject.preview_item.Spells.FirstOrDefault();
+                    LocalToy.Description = firstSpell.description;
+                }
+                LocalToy.Source = Toy.source.Name;
+                if (Toy.mediaObject.Assets.Count > 0)
+                {
+                    LocalToy.Icon = Toy.mediaObject.Assets.FirstOrDefault().Value;
+                }
+
+                try
+                {
+                    await Http.PostAsJsonAsync<LocalToy>("api/Toy", LocalToy);
+                }
+                catch
+                {
+                    new Exception("Something went wrong");
+                }
+            }
+            finally
+            {
+                AddingToy = false;
+                Toy = null;
+                SuccessMessage = $"Successfully added toy {LocalToy.Name}";
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            ErrorMessage = "Please specify patch and subcategory";
+        }
+    }
+}

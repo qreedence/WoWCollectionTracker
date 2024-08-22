@@ -1,0 +1,173 @@
+﻿@page "/admin/achievements/edit"
+@using SharedModels.Models
+@inject HttpClient Http
+
+
+<h3>EditAchievements</h3>
+
+<button @onclick='() => SetCurrentView("Patch")'>Search by patch</button>
+<button @onclick='() => SetCurrentView("ID")'>Search by ID</button>
+
+@if (CurrentView == "Patch")
+{
+    <div>
+        <label>Search for achievements by patch</label>
+        <PatchSelector @bind-Patch="@Patch"></PatchSelector>
+        <button @onclick="SearchByPatch">Search</button>
+    </div>
+
+    @if (AchievementList != null && AchievementList.Count > 0)
+    {
+        @if (EditId.HasValue)
+        {
+            // Show only the achievement being edited
+            var achievement = AchievementList.FirstOrDefault(a => a.Id == EditId.Value);
+            if (achievement != null)
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th colspan="2">Id</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Subcategory</th>
+                            <th>Show</th>
+                            <th>Unobtainable</th>
+                            <th>Display Order</th>
+                            <th>Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><img src="@achievement.Icon" /></td>
+                            <td>@achievement.Id</td>
+                            <td>
+                                <InputText @bind-Value="achievement.Name" />
+                            </td>
+                            <td>
+                                <InputText @bind-Value="achievement.SubCategory" />
+                            </td>
+                            <td>
+                                <InputText @bind-Value="achievement.SubSubCategory" />
+                            </td>
+                            <td>
+                                <InputCheckbox @bind-Value="achievement.Show"></InputCheckbox>
+                            </td>
+                            <td>
+                                <InputCheckbox @bind-Value="achievement.Unobtainable"></InputCheckbox>
+                            </td>
+                            <td>
+                                <InputNumber @bind-Value="achievement.DisplayOrder"></InputNumber>
+                            </td>
+
+                            <td>
+                                <button @onclick="() => SaveChanges(achievement.Id)">Save</button>
+                                <button @onclick="CancelEdit">Cancel</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+        }
+        else
+        {
+            // Show the list of achievements with edit buttons
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2">Id</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Subcategory</th>
+                        <th>Edit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var achievement in AchievementList)
+                    {
+                        <tr>
+                            <td><img src="@achievement.Icon" /></td>
+                            <td>@achievement.Id</td>
+                            <td>@achievement.Name</td>
+                            <td>@achievement.SubCategory</td>
+                            <td>@achievement.SubSubCategory</td>
+                            <td>
+                                <button @onclick="() => EditAchievement(achievement.Id)">Edit</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    }
+}
+else if(CurrentView == "ID")
+{
+    <div>
+        <label>Search for achievement by ID:</label>
+        <InputNumber @bind-Value="AchievementId"></InputNumber>
+        <button @onclick="SearchById">Search</button>
+    </div>
+
+}
+
+@code {
+    public List<LocalAchievement> AchievementList { get; set; } = new List<LocalAchievement>();
+
+    public LocalAchievement SingleAchievement { get; set; } = new LocalAchievement();
+
+    public int? EditId { get; set; } = null;
+
+    public string Patch { get; set; } = "";
+
+    public int AchievementId { get; set; }
+
+    public string CurrentView { get; set; } = "Patch";
+
+    public async Task SearchByPatch()
+    {
+        var result = await Http.GetFromJsonAsync<List<LocalAchievement>>($"api/Achievement/filter-patch?patch={Patch}");
+        if (result != null & result.Count > 0)
+        {
+            AchievementList = result;
+        }
+    }
+
+    public async Task SearchById()
+    {
+        var result = await Http.GetFromJsonAsync<LocalAchievement>($"api/Achievement/local/{AchievementId}");
+    }
+
+    private void SetCurrentView(string view)
+    {
+        CurrentView = view;
+        StateHasChanged();
+    }
+
+    private void EditAchievement(int id)
+    {
+        EditId = id;
+        StateHasChanged();
+    }
+
+    private void CancelEdit()
+    {
+        EditId = null;
+    }
+
+    private async Task SaveChanges(int id)
+    {
+        var achievement = AchievementList.FirstOrDefault(a => a.Id == id);
+        if (achievement != null)
+        {
+            // Make HTTP request to update achievement
+            await Http.PutAsJsonAsync($"api/Achievement/", achievement);
+
+            // Reset EditId after saving
+            EditId = null;
+
+            // Optionally refresh the list if needed
+            await SearchByPatch();
+        }
+    }
+}

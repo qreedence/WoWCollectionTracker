@@ -1,0 +1,85 @@
+﻿@using SharedModels.Models
+
+<div class="achievement-card @(Achievement.Completed ? "completed-achievement" : "")" @onclick="() => OnToggleCriteria.InvokeAsync(Achievement.Id)">
+    <div class="achievement-card-main">
+        <div>
+            <img class="achievement-icon" src="@Achievement.Icon" alt="@Achievement.Name" />
+        </div>
+        <div class="achievement-info">
+            <div class="flex-col">
+                <h1>@Achievement.Name</h1>
+                <p>@Achievement.Description</p>
+
+                @if (Achievement.Criteria != null && Achievement.Criteria.child_criteria != null && ShowCriteria == true)
+                {
+                    @if (Achievement.Completed == true)
+                    {
+                        <p>@DateFormat(Achievement.CompletionDateAndTime)</p>
+                    }
+                    <ul>
+                        @foreach (var criteria in Achievement.Criteria.child_criteria)
+                        {
+                            <li class="@(criteria.is_completed ? "completed-criteria" : "")">
+                                @criteria.description
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (Achievement.CriteriaAmount > 0 && CharacterCriteriaAmount > 0 && ShowCriteria == true && Achievement.Criteria == null)
+                {
+                    <p>@CharacterCriteriaAmount / @Achievement.CriteriaAmount</p>
+                    <div class="progress-bar" style="--p:@CriteriaCompletionPercentage">
+                        <div class="progress-bar__label"></div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <div class="flex-col right">
+        <p class="points">@Achievement.Points.ToString()</p>
+        @if (WowheadLink != "")
+        {
+            <NavLink href="@WowheadLink">Wowhead</NavLink>
+        }
+    </div>
+</div>
+
+
+@code {
+    [Parameter]
+    public LocalAchievement Achievement { get; set; }
+
+    [Parameter]
+    public bool ShowCriteria { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<int> OnToggleCriteria { get; set; }
+
+    [Parameter]
+    public int CharacterCriteriaAmount { get; set; }
+
+    public double CriteriaCompletionPercentage { get; set; }
+
+    public string WowheadLink { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Achievement != null)
+        {
+            WowheadLink = $"https://www.wowhead.com/achievement={Achievement.Id}";
+        }
+    }
+
+    public string DateFormat(DateTime? dateTime)
+    {
+        return $"Completed on {dateTime:MMMM d, yyyy}";
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        CriteriaCompletionPercentage = Achievement.CriteriaAmount > 0
+               ? ((double)CharacterCriteriaAmount / Achievement.CriteriaAmount) * 100
+               : 0;
+    }
+}

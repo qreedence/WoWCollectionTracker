@@ -1,0 +1,116 @@
+﻿@using SharedModels.Models
+
+@if (!string.IsNullOrEmpty(Category))
+{
+    <div class="achievement-category">
+        <div class="achievement-category-header" @onclick="ToggleShowCategory">
+            @if(ShowCategory == false)
+            {
+                <h3><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z" /></svg> @Category</h3>
+
+            }
+            else
+            {
+                <h3><svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#e8eaed"><path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" /></svg> @Category
+
+                </h3>
+            }
+            @if (AchievementList != null && AchievementList.Count > 0)
+            {
+                <div class="flex-row">
+                    <h3>@CompletedAchievements / @TotalAchievements</h3>
+                    <div class="progress-bar" style="--p:@CompletionPercentage">
+                        <div class="progress-bar__label"></div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (ShowCategory)
+        {
+            @if (AchievementList != null && AchievementList.Count > 0 && SimplifiedAchievementData != null)
+            {
+                var groupedAchievements = AchievementList
+                .Where(a => a.SubCategory == Category)
+                .GroupBy(a => string.IsNullOrEmpty(a.SubSubCategory) ? "" : a.SubSubCategory);
+
+                @foreach (var group in groupedAchievements)
+                {
+                    <div class="achievement-subcategory">
+                        <h4>@group.Key</h4>
+                        @foreach (var achievement in group)
+                        {
+                            @if (!achievement.Unobtainable || achievement.Completed)
+                            {
+                                <AchievementListing Achievement="@achievement"
+                                                    ShowCriteria="@(ExpandedAchievementId == achievement.Id)"
+                                                    OnToggleCriteria="() => OnToggleAchievement.InvokeAsync(achievement.Id)"
+                                                    CharacterCriteriaAmount="GetCharacterCriteriaAmount(achievement.Id)">
+                                </AchievementListing>
+                            }
+                        }
+                    </div>
+                }
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Category { get; set; }
+
+    [Parameter]
+    public List<LocalAchievement> AchievementList { get; set; }
+
+    [Parameter]
+    public SimplifiedAchievementData SimplifiedAchievementData { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnToggleAchievement { get; set; }
+
+    [Parameter]
+    public int? ExpandedAchievementId { get; set; }
+
+    public int CompletedAchievements { get; set; }
+
+    public bool ShowCategory { get; set; } = false;
+
+    public int TotalAchievements { get; set; }
+
+    public double CompletionPercentage { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (AchievementList != null && AchievementList.Count > 0 && SimplifiedAchievementData != null)
+        {
+            var filteredAchievements = AchievementList
+            .Where(a => a.SubCategory == Category && !(a.Unobtainable && !a.Completed))
+            .ToList();
+
+            CompletedAchievements = filteredAchievements.Where(a => a.SubCategory == Category && a.Completed).Count();
+            TotalAchievements = filteredAchievements.Where(a => a.SubCategory == Category).Count();
+            CompletionPercentage = TotalAchievements > 0
+                ? ((double)CompletedAchievements / TotalAchievements) * 100
+                : 0;
+
+            AchievementList = filteredAchievements
+               .Where(a => a.SubCategory == Category)
+               .OrderByDescending(a => a.Completed)
+               .ThenBy(a => a.DisplayOrder)
+               .ToList();
+        }
+    }
+
+    private int GetCharacterCriteriaAmount(int achievementId)
+    {
+        return SimplifiedAchievementData?.achievements?
+            .Where(a => a.id == achievementId)
+            .Select(a => a.criteria?.amount)
+            .FirstOrDefault() ?? 0;
+    }
+
+    private void ToggleShowCategory()
+    {
+        ShowCategory = !ShowCategory;
+    }
+}

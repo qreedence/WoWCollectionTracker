@@ -1,0 +1,80 @@
+﻿@using SharedModels.Models
+
+@if (!string.IsNullOrEmpty(Category))
+{
+    <div class="achievement-category">
+        <div class="achievement-category-header" @onclick="ToggleShowCategory">
+            <h3>@Category</h3>
+            @if(MountList != null && MountList.Count > 0)
+            {
+                <div class="flex-row">
+                    <h3>@CollectedMounts / @TotalMounts</h3>
+                    <div class="progress-bar" style="--p:@CompletionPercentage">
+                        <div class="progress-bar__label"></div>
+                    </div>
+                </div>
+            }
+        </div>
+        @if (ShowCategory)
+        {
+            @if (MountList != null && MountList.Count > 0)
+            {
+                var groupedMounts = MountList
+                 .Where(m => m.SubCategory == Category)
+                 .GroupBy(m => string.IsNullOrEmpty(m.SubSubCategory) ? "" : m.SubSubCategory);
+
+                @foreach (var group in groupedMounts)
+                {
+                    <div class="achievement-subcategory">
+                        <h4>@group.Key</h4>
+                        @foreach (var mount in group)
+                        {
+                            <MountListing Mount="mount">
+                            </MountListing>
+                        }
+                    </div>
+                }
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Category { get; set; }
+
+    [Parameter]
+    public List<LocalMount> MountList { get; set; }
+
+    public bool ShowCategory { get; set; } = false;
+
+    public double CompletionPercentage { get; set; }
+
+    public int TotalMounts { get; set; }
+
+    public int CollectedMounts { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var filteredMounts = MountList
+            .Where(a => a.SubCategory == Category && !(a.Unobtainable && !a.Collected))
+            .ToList();
+
+        CollectedMounts = filteredMounts.Where(a => a.SubCategory == Category && a.Collected).Count();
+        TotalMounts = filteredMounts.Where(a => a.SubCategory == Category).Count();
+        CompletionPercentage = TotalMounts > 0
+            ? ((double)CollectedMounts / TotalMounts) * 100
+            : 0;
+
+        MountList = filteredMounts
+           .Where(a => a.SubCategory == Category)
+           .OrderByDescending(a => a.Collected)
+           .ThenBy(a => a.DisplayOrder)
+           .ToList();
+    }
+
+    private void ToggleShowCategory()
+    {
+        ShowCategory = !ShowCategory;
+    }
+}

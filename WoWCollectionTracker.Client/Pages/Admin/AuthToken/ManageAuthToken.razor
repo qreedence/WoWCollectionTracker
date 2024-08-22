@@ -1,0 +1,58 @@
+﻿@page "/admin/auth"
+@inject HttpClient Http
+@using WoWCollectionTracker.Client.Models.AuthToken
+@rendermode InteractiveServer
+
+<h3>ManageAuthToken</h3>
+@if (AuthTokens == null)
+{
+    <p>Loading...</p>
+}
+else if (AuthTokens.Count == 0)
+{
+    <p>No auth tokens found.</p>
+}
+else if (AuthTokens != null && AuthTokens.Count > 0)
+{
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Hashed Auth Token</th>
+            <th>Date of acquisition</th>
+            <th>Expires At</th>
+        </tr>
+        @foreach (var token in AuthTokens)
+        {
+            <tr>
+                <td>@token.Id</td>
+                <td>@token.HashedToken</td>
+                <td>@token.Acquired.ToString()</td>
+                <td>@token.Expires.ToString()</td>
+            </tr>
+        }
+    </table>
+}
+
+<button @onclick="RefreshToken">Refresh token</button>
+
+@code {
+    private List<AuthToken> AuthTokens = new List<AuthToken>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAuthTokens();
+    }
+
+    public async Task RefreshToken()
+    {
+        Console.WriteLine("RefreshToken method called.");
+        await Http.PostAsync("api/AuthTokens/refresh", null);
+        await LoadAuthTokens();
+        StateHasChanged();
+    }
+
+    public async Task LoadAuthTokens()
+    {
+        AuthTokens = AuthTokens = await Http.GetFromJsonAsync<List<AuthToken>>("api/AuthTokens");
+    }
+}
